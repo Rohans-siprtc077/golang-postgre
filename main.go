@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"golang-postgre/config"
 	"golang-postgre/models"
@@ -13,17 +14,19 @@ import (
 )
 
 func main() {
-	// Load environment variables
-	godotenv.Load()
 
-	// Connect to DB
+	godotenv.Load()
+	port := os.Getenv("SERVER_PORT")
+
+	if port == "" {
+		log.Fatal("❌ SERVER_PORT is not set")
+	}
+
 	config.ConnectDB()
 	config.DB.AutoMigrate(&models.User{})
 
-	// Create Echo instance
 	e := echo.New()
 
-	// ✅ Enable CORS (REQUIRED for jQuery / frontend)
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{
@@ -39,10 +42,8 @@ func main() {
 		},
 	}))
 
-	// Register routes
 	routes.RegisterRoutes(e)
 
-	// Start server
-	log.Println("🚀 Server running at http://localhost:8080")
-	log.Fatal(e.Start(":8080"))
+	log.Println("🚀 Server running at http://localhost:%s\n", port)
+	log.Fatal(e.Start(":" + port))
 }

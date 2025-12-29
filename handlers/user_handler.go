@@ -96,7 +96,7 @@ func UpdateUser(c echo.Context) error {
 		"email": input.Email,
 	}
 
-	// 4️⃣ Hash password if provided
+	
 	if input.Password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 		if err != nil {

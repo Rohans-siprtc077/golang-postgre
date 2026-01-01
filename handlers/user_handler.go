@@ -60,14 +60,12 @@ func GetUserByID(c echo.Context) error {
 func UpdateUser(c echo.Context) error {
 	var user models.User
 
-	// 1️⃣ Ensure ACTIVE user exists
 	if err := config.DB.
 		Where("id = ? AND deleted_at IS NULL", c.Param("id")).
 		First(&user).Error; err != nil {
 		return c.JSON(http.StatusNotFound, echo.Map{"error": "User not found"})
 	}
 
-	// Input struct (now includes password)
 	var input struct {
 		Name     string `json:"name"`
 		Email    string `json:"email"`
@@ -77,7 +75,6 @@ func UpdateUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid input"})
 	}
 
-	// 2️⃣ Prevent duplicate active emails
 	var count int64
 	config.DB.
 		Model(&models.User{}).
@@ -90,13 +87,11 @@ func UpdateUser(c echo.Context) error {
 		})
 	}
 
-	// 3️⃣ Prepare update map
 	updates := map[string]interface{}{
 		"name":  input.Name,
 		"email": input.Email,
 	}
 
-	
 	if input.Password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -107,7 +102,6 @@ func UpdateUser(c echo.Context) error {
 		updates["password"] = string(hash)
 	}
 
-	// 5️⃣ Explicit update + error check
 	if err := config.DB.
 		Model(&user).
 		Updates(updates).Error; err != nil {
@@ -122,7 +116,6 @@ func UpdateUser(c echo.Context) error {
 func DeleteUser(c echo.Context) error {
 	var user models.User
 
-	// 1️⃣ Check if ACTIVE user exists
 	if err := config.DB.
 		Where("id = ? AND deleted_at IS NULL", c.Param("id")).
 		First(&user).Error; err != nil {
@@ -131,7 +124,6 @@ func DeleteUser(c echo.Context) error {
 		})
 	}
 
-	// 2️⃣ Perform SOFT delete
 	if err := config.DB.Delete(&user).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),

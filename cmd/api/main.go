@@ -44,6 +44,6 @@ func main() {
 
 	routes.RegisterRoutes(e)
 
-	log.Println("🚀 Server running at http://localhost:%s\n", port)
+	log.Printf("🚀 Server running at http://localhost:%s\n", port)
 	log.Fatal(e.Start(":" + port))
 }

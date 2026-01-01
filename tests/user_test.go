@@ -15,20 +15,17 @@ import (
 )
 
 func TestCreateUser(t *testing.T) {
-	// Load TEST environment variables (not dev .env)
+
 	if err := godotenv.Load("../.env.test"); err != nil {
-		t.Fatal("❌ Failed to load .env.test file")
+		t.Fatal("Failed to load .env.test file")
 	}
 
-	// 🚨 Safety check: never allow dev DB in tests
 	if os.Getenv("DB_NAME") == "postgis_36_sample" {
-		t.Fatal("❌ Tests are using the development database")
+		t.Fatal("Tests are using the development database")
 	}
 
-	// Connect to TEST database
 	config.ConnectDB()
 
-	// Clean test data before running test
 	config.DB.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 
 	e := echo.New()

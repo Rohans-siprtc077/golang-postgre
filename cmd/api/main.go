@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-
 	godotenv.Load()
 	port := os.Getenv("SERVER_PORT")
 
@@ -22,8 +21,14 @@ func main() {
 		log.Fatal("❌ SERVER_PORT is not set")
 	}
 
+	// Connect to PostgreSQL
 	config.ConnectDB()
 	config.DB.AutoMigrate(&models.User{})
+
+	// Connect to RabbitMQ
+	config.ConnectRabbitMQ()
+	defer config.RabbitConn.Close()
+	defer config.RabbitChannel.Close()
 
 	e := echo.New()
 

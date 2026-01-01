@@ -11,35 +11,72 @@ import (
 )
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	config.ConnectRabbitMQ()
 
-	msgs, _ := config.RabbitChannel.Consume(
-		"",
-		"",
+	createdQueue := "user.created.queue"
+	updatedQueue := "user.updated.queue"
+
+	createdMsgs, err := config.RabbitChannel.Consume(
+		createdQueue,
+		"created-consumer",
+		false, // manual ack
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		log.Fatal("❌ Failed to consume created queue:", err)
+	}
+
+	updatedMsgs, err := config.RabbitChannel.Consume(
+		updatedQueue,
+		"updated-consumer",
 		false,
 		false,
 		false,
 		false,
 		nil,
 	)
-
-	for msg := range msgs {
-		var event events.UserEvent
-		if err := json.Unmarshal(msg.Body, &event); err != nil {
-			msg.Nack(false, false)
-			continue
-		}
-
-		switch event.Event {
-		case "USER_CREATED":
-			log.Printf("[USER_CREATED] Welcome email sent to %s\n", event.Data.Email)
-
-		case "USER_UPDATED":
-			log.Printf("[USER_UPDATED] User %d profile updated\n", event.Data.UserID)
-		}
-
-		msg.Ack(false)
+	if err != nil {
+		log.Fatal("❌ Failed to consume updated queue:", err)
 	}
+
+	log.Println("📥 Consumer started. Waiting for events...")
+
+	forever := make(chan bool)
+
+	go func() {
+		for msg := range createdMsgs {
+			var event events.UserEvent
+
+			if err := json.Unmarshal(msg.Body, &event); err != nil {
+				log.Println("❌ Invalid message:", err)
+				msg.Nack(false, false)
+				continue
+			}
+
+			log.Printf("[USER_CREATED] Welcome email sent to %s\n", event.Data.Email)
+			msg.Ack(false)
+		}
+	}()
+
+	go func() {
+		for msg := range updatedMsgs {
+			var event events.UserEvent
+
+			if err := json.Unmarshal(msg.Body, &event); err != nil {
+				log.Println("❌ Invalid message:", err)
+				msg.Nack(false, false)
+				continue
+			}
+
+			log.Printf("[USER_UPDATED] User %d profile updated\n", event.Data.UserID)
+			msg.Ack(false)
+		}
+	}()
+
+	<-forever
 }

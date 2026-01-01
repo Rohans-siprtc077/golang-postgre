@@ -12,6 +12,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// Generic publish function (kept for reference or future use)
 func publish(event UserEvent, routingKey string) {
 	body, _ := json.Marshal(event)
 
@@ -32,43 +33,4 @@ func publish(event UserEvent, routingKey string) {
 	if err != nil {
 		log.Println("❌ Event publish failed:", err)
 	}
-}
-
-// func PublishUserCreated(id uint, name, email string) {
-// 	publish(UserEvent{
-// 		Event:     "USER_CREATED",
-// 		Version:   "1.0",
-// 		Timestamp: time.Now(),
-// 		Data: UserData{
-// 			UserID: id,
-// 			Name:   name,
-// 			Email:  email,
-// 		},
-// 	}, "user.created")
-// }
-
-func PublishUserCreated(body []byte) error {
-	return config.RabbitChannel.Publish(
-		"user.events",
-		"user.created",
-		false,
-		false,
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        body,
-		},
-	)
-}
-
-func PublishUserUpdated(id uint, name, email string) {
-	publish(UserEvent{
-		Event:     "USER_UPDATED",
-		Version:   "1.0",
-		Timestamp: time.Now(),
-		Data: UserData{
-			UserID: id,
-			Name:   name,
-			Email:  email,
-		},
-	}, "user.updated")
 }

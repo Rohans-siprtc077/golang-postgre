@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
+	"time"
 
 	"golang-postgre/config"
+	"golang-postgre/events"
 	"golang-postgre/models"
 
 	"github.com/labstack/echo/v4"
@@ -38,23 +41,25 @@ func CreateUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
 
+	// Publish user created event
+	event := events.UserEvent{
+		Event:     "USER_CREATED",
+		Version:   "1.0",
+		Timestamp: time.Now(),
+		Data: events.UserData{
+			UserID: user.ID,
+			Name:   user.Name,
+			Email:  user.Email,
+		},
+	}
+
+	eventBody, _ := json.Marshal(event)
+	if err := config.PublishUserCreated(eventBody); err != nil {
+		// Log error but don't fail the request
+		c.Logger().Error("Failed to publish user created event:", err)
+	}
+
 	return c.JSON(http.StatusCreated, user)
-}
-
-func GetUsers(c echo.Context) error {
-	var users []models.User
-	if err := config.DB.Where("deleted_at IS NULL").Find(&users).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
-	}
-	return c.JSON(http.StatusOK, users)
-}
-
-func GetUserByID(c echo.Context) error {
-	var user models.User
-	if err := config.DB.Where("id = ? AND deleted_at IS NULL", c.Param("id")).First(&user).Error; err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": "User not found"})
-	}
-	return c.JSON(http.StatusOK, user)
 }
 
 func UpdateUser(c echo.Context) error {
@@ -110,6 +115,40 @@ func UpdateUser(c echo.Context) error {
 		})
 	}
 
+	// Publish user updated event
+	event := events.UserEvent{
+		Event:     "USER_UPDATED",
+		Version:   "1.0",
+		Timestamp: time.Now(),
+		Data: events.UserData{
+			UserID: user.ID,
+			Name:   user.Name,
+			Email:  user.Email,
+		},
+	}
+
+	eventBody, _ := json.Marshal(event)
+	if err := config.PublishUserUpdated(eventBody); err != nil {
+		c.Logger().Error("Failed to publish user updated event:", err)
+	}
+
+	return c.JSON(http.StatusOK, user)
+}
+
+// GetUsers and GetUserByID remain the same...
+func GetUsers(c echo.Context) error {
+	var users []models.User
+	if err := config.DB.Where("deleted_at IS NULL").Find(&users).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, users)
+}
+
+func GetUserByID(c echo.Context) error {
+	var user models.User
+	if err := config.DB.Where("id = ? AND deleted_at IS NULL", c.Param("id")).First(&user).Error; err != nil {
+		return c.JSON(http.StatusNotFound, echo.Map{"error": "User not found"})
+	}
 	return c.JSON(http.StatusOK, user)
 }
 
